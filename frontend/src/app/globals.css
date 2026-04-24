@@ -1,0 +1,92 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base: #09090b;
+    --bg-card: #18181b;
+    --bg-elevated: #1f1f23;
+    --border: #27272a;
+    --violet: #7c3aed;
+    --violet-light: #a78bfa;
+    --gold: #eab308;
+    --gold-light: #fde047;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    @apply bg-bg-base text-zinc-100 font-sans antialiased;
+    background: var(--bg-base);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-card);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-card border border-zinc-800 rounded-xl p-5;
+  }
+
+  .card-elevated {
+    @apply bg-bg-elevated border border-zinc-800 rounded-xl p-5;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium;
+  }
+
+  .badge-violet {
+    @apply badge bg-violet-950 text-violet-300 border border-violet-800;
+  }
+
+  .badge-gold {
+    @apply badge bg-yellow-950 text-gold-300 border border-yellow-800;
+  }
+
+  .badge-green {
+    @apply badge bg-green-950 text-green-400 border border-green-800;
+  }
+
+  .badge-red {
+    @apply badge bg-red-950 text-red-400 border border-red-900;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium text-sm transition-colors border border-zinc-700;
+  }
+
+  .tab-active {
+    @apply text-violet-400 border-b-2 border-violet-500;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold text-zinc-50 font-mono;
+  }
+
+  .stat-label {
+    @apply text-xs font-medium text-zinc-500 uppercase tracking-wider;
+  }
+}

@@ -1,0 +1,23 @@
+exemple/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.db
+*.sqlite3
+
+# Data (uploads + db)
+data/
+!data/.gitkeep
+
+# Node
+node_modules/
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
