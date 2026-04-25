@@ -1,11 +1,12 @@
 # ── Deps (toutes les dépendances, dev incluses — requises par next build) ─────
-FROM node:20-alpine AS deps
+# $BUILDPLATFORM = plateforme du runner CI (linux/amd64) → npm tourne natif, pas sous QEMU
+FROM --platform=$BUILDPLATFORM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # ── Builder ───────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

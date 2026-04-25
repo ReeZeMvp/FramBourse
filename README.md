@@ -29,88 +29,101 @@ Dashboard de suivi de portefeuille boursier — usage local, auto-hébergé sur 
 
 ## Déploiement — Raspberry Pi 5 (production)
 
-### 1. Cloner le dépôt
+> **Stratégie :** les images Docker sont buildées par GitHub Actions (CI) et publiées sur GHCR.
+> Le Pi **tire** les images pré-buildées — aucun `docker build` local nécessaire (évite les problèmes de BuildKit/containerd et la lenteur de compilation ARM64).
+
+### 1. Préparer le réseau partagé (une seule fois)
+
+FramBourse partage le Caddy de SimulIR. Il faut d'abord créer le réseau Docker que les deux stacks rejoignent :
 
 ```bash
-git clone https://github.com/ReeZeMvp/FramBourse.git
-cd FramBourse
+docker network create caddy-net
 ```
 
-### 2. Configurer les variables d'environnement
+### 2. Mettre à jour SimulIR pour rejoindre le réseau
 
 ```bash
+cd ~/docker/simul_ir   # ou le chemin de ton stack SimulIR
+git pull               # récupère le docker-compose.yml mis à jour
+docker compose up -d --force-recreate caddy   # recrée uniquement Caddy avec le nouveau réseau
+```
+
+### 3. Cloner FramBourse et configurer
+
+```bash
+git clone https://github.com/ReeZeMvp/FramBourse.git ~/docker/FramBourse
+cd ~/docker/FramBourse
 cp .env.example .env
 ```
 
 Éditer `.env` :
 
 ```env
-# URL que le navigateur utilise pour joindre le backend
-# Si tu passes par Nginx Proxy Manager avec un domaine local :
-NEXT_PUBLIC_API_URL=http://frambourse-api.home
-
-# (Optionnel) Clé API OpenFIGI pour la résolution ISIN → ticker
-# Gratuit, 25 000 req/jour : https://www.openfigi.com/api
-OPENFIGI_API_KEY=
-
-# Chemin absolu sur le Pi où stocker la base SQLite + uploads
+NEXT_PUBLIC_API_URL=https://frambourse.kaalynn.fr/api
+CORS_ORIGINS=["https://frambourse.kaalynn.fr"]
+OPENFIGI_API_KEY=          # optionnel
 DATA_DIR=/opt/frambourse/data
 ```
 
-### 3. Créer le dossier de données persistent
+### 4. Créer le dossier de données
 
 ```bash
 sudo mkdir -p /opt/frambourse/data/uploads
 sudo chown -R $USER:$USER /opt/frambourse/data
 ```
 
-### 4. Build des images ARM64 et démarrage
+### 5. Lancer FramBourse (pull + démarrage)
 
 ```bash
-# Build natif sur le Pi (ARM64 détecté automatiquement)
-docker compose build
+# Tirer les images pré-buildées depuis GHCR (pas de build local)
+docker compose pull
 
-# Lancer en arrière-plan
+# Démarrer
 docker compose up -d
 
-# Vérifier que tout tourne
+# Vérifier
 docker compose ps
 docker compose logs -f
 ```
 
-> **Cross-compilation depuis un PC x86 :** si tu build depuis ta machine Windows/Mac pour déployer ensuite sur le Pi, utilise :
-> ```bash
-> docker buildx build --platform linux/arm64 -t frambourse-api ./backend --push
-> docker buildx build --platform linux/arm64 -t frambourse-ui ./frontend --push
-> ```
-
-### 5. Initialiser la base de données (première fois uniquement)
+### 6. Initialiser la base de données (première fois uniquement)
 
 ```bash
 docker compose exec backend python seed.py
 ```
 
-Cela crée les utilisateurs **Agathe** et **Victor** ainsi que leurs portefeuilles (PEA, CTO, PEE).
+### 7. Mises à jour
+
+À chaque nouveau push sur `main`, GitHub Actions rebuild et publie les images. Pour mettre à jour le Pi :
+
+```bash
+cd ~/docker/FramBourse
+git pull
+docker compose pull
+docker compose up -d
+```
 
 ---
 
-## Configuration Nginx Proxy Manager
-
-Dans ton Nginx Proxy Manager (NPM), crée **deux Proxy Hosts** :
-
-| Domaine | Scheme | Host | Port | Notes |
-|---------|--------|------|------|-------|
-| `frambourse.home` | http | `frambourse-ui` | 3000 | Interface web |
-| `frambourse-api.home` | http | `frambourse-api` | 8000 | API backend |
-
-> Les noms `frambourse-ui` et `frambourse-api` sont les noms de containers Docker définis dans `docker-compose.yml`. NPM et les containers doivent être sur le même réseau Docker, ou tu peux utiliser l'IP locale du Pi (`192.168.x.x`).
-
-**Pour accéder depuis le réseau local**, ajoute les entrées DNS dans ton routeur (ou dans `/etc/hosts` sur chaque machine) :
+## Architecture multi-site (Caddy partagé)
 
 ```
-192.168.1.XX  frambourse.home
-192.168.1.XX  frambourse-api.home
+Internet
+    │
+    ▼
+[Caddy — simul_ir stack]  ← port 80/443 du Pi
+    │              │
+    │  simulir.kaalynn.fr    → frontend:3000 / backend:8000   (réseau interne simul_ir)
+    │  frambourse.kaalynn.fr → frambourse-ui:3000              (réseau caddy-net)
+    │              └──────── → frambourse-api:8000 (strip /api) (réseau caddy-net)
+    │
+[caddy-net] ←── réseau Docker externe partagé
+    ├── frambourse-api  (container FramBourse backend)
+    └── frambourse-ui   (container FramBourse frontend)
 ```
+
+Les deux stacks restent **indépendants** — seul Caddy est partagé via le réseau `caddy-net`.
+Si SimulIR est mis à jour ou redémarré, FramBourse continue de tourner, et vice-versa.
 
 ---
 

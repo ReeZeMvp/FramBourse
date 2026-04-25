@@ -1,54 +1,51 @@
 # ── FramBourse — Raspberry Pi 5 (ARM64) ───────────────────────────────────────
-# Place behind Nginx Proxy Manager.
-# Map backend → frambourse-api.local  and  frontend → frambourse.local
-# (or use a single domain with path-based routing)
+# Déploiement : les images sont buildées par GitHub Actions (CI) et publiées
+# sur GHCR. Le Pi tire simplement les images — plus de build local nécessaire.
+#   docker compose pull && docker compose up -d
+#
+# Exposition : Caddy (stack simul_ir) gère frambourse.kaalynn.fr sur le réseau
+# partagé "caddy-net". Les ports 80/443 NE sont PAS exposés ici.
 
 services:
 
   backend:
-    build:
+    image: ghcr.io/reezem vp/frambourse-api:latest
+    build:                          # conservé pour dev local uniquement
       context: ./backend
       dockerfile: Dockerfile
-      platforms:
-        - linux/arm64
     container_name: frambourse-api
     restart: unless-stopped
     environment:
       DATABASE_URL: sqlite+aiosqlite:///./data/frambourse.db
       UPLOAD_DIR: ./data/uploads
       OPENFIGI_API_KEY: ${OPENFIGI_API_KEY:-}
-      CORS_ORIGINS: '["http://frontend:3000", "http://frambourse.local", "http://localhost:3000"]'
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["http://localhost:3000"]'}
     volumes:
       - frambourse-data:/app/data
-    ports:
-      - "8000:8000"           # remove/comment in production (NPM handles routing)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
     networks:
-      - frambourse-net
+      - frambourse-net   # réseau interne (frontend ↔ backend)
+      - caddy-net        # réseau partagé avec le Caddy de simul_ir
 
   frontend:
-    build:
+    image: ghcr.io/reezem vp/frambourse-ui:latest
+    build:                          # conservé pour dev local uniquement
       context: ./frontend
       dockerfile: Dockerfile
-      platforms:
-        - linux/arm64
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
     container_name: frambourse-ui
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8000}
-    ports:
-      - "3000:3000"           # remove/comment in production (NPM handles routing)
     depends_on:
       backend:
         condition: service_healthy
     networks:
-      - frambourse-net
+      - frambourse-net   # réseau interne
+      - caddy-net        # réseau partagé avec le Caddy de simul_ir
 
 volumes:
   frambourse-data:
@@ -56,8 +53,10 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${DATA_DIR:-./data}   # mount host dir so DB survives rebuilds
+      device: ${DATA_DIR:-./data}
 
 networks:
   frambourse-net:
     driver: bridge
+  caddy-net:
+    external: true   # créé une seule fois : docker network create caddy-net
