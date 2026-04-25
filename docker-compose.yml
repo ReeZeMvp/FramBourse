@@ -9,7 +9,7 @@
 services:
 
   backend:
-    image: ghcr.io/reezem vp/frambourse-api:latest
+    image: ghcr.io/reezemvp/frambourse-api:latest
     build:                          # conservé pour dev local uniquement
       context: ./backend
       dockerfile: Dockerfile
@@ -32,7 +32,7 @@ services:
       - caddy-net        # réseau partagé avec le Caddy de simul_ir
 
   frontend:
-    image: ghcr.io/reezem vp/frambourse-ui:latest
+    image: ghcr.io/reezemvp/frambourse-ui:latest
     build:                          # conservé pour dev local uniquement
       context: ./frontend
       dockerfile: Dockerfile
