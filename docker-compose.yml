@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ── FramBourse — Raspberry Pi 5 (ARM64) ───────────────────────────────────────
 # Place behind Nginx Proxy Manager.
 # Map backend → frambourse-api.local  and  frontend → frambourse.local
