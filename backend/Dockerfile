@@ -20,6 +20,7 @@ WORKDIR /app
 COPY --from=builder /install /usr/local
 
 COPY app/ ./app/
+COPY seed.py .
 
 RUN mkdir -p /app/data/uploads
 
