@@ -8,7 +8,7 @@
 
 services:
 
-  backend:
+  frambourse-backend:
     image: ghcr.io/reezemvp/frambourse-api:latest
     build:                          # conservé pour dev local uniquement
       context: ./backend
@@ -28,12 +28,10 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      frambourse-net: {}
-      caddy-net:
-        aliases:
-          - frambourse-api   # alias unique sur caddy-net — évite collision avec "backend" de simul_ir
+      - frambourse-net
+      - caddy-net
 
-  frontend:
+  frambourse-frontend:
     image: ghcr.io/reezemvp/frambourse-ui:latest
     build:                          # conservé pour dev local uniquement
       context: ./frontend
@@ -43,13 +41,11 @@ services:
     container_name: frambourse-ui
     restart: unless-stopped
     depends_on:
-      backend:
+      frambourse-backend:
         condition: service_healthy
     networks:
-      frambourse-net: {}
-      caddy-net:
-        aliases:
-          - frambourse-ui    # alias unique sur caddy-net — évite collision avec "frontend" de simul_ir
+      - frambourse-net
+      - caddy-net
 
 volumes:
   frambourse-data:
