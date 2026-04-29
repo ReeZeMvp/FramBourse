@@ -28,8 +28,10 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - frambourse-net   # réseau interne (frontend ↔ backend)
-      - caddy-net        # réseau partagé avec le Caddy de simul_ir
+      frambourse-net: {}
+      caddy-net:
+        aliases:
+          - frambourse-api   # alias unique sur caddy-net — évite collision avec "backend" de simul_ir
 
   frontend:
     image: ghcr.io/reezemvp/frambourse-ui:latest
@@ -44,8 +46,10 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - frambourse-net   # réseau interne
-      - caddy-net        # réseau partagé avec le Caddy de simul_ir
+      frambourse-net: {}
+      caddy-net:
+        aliases:
+          - frambourse-ui    # alias unique sur caddy-net — évite collision avec "frontend" de simul_ir
 
 volumes:
   frambourse-data:
